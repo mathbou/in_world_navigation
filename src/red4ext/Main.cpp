@@ -93,11 +93,12 @@ void GetQuestMappin(RED4ext::IScriptable *aContext, RED4ext::CStackFrame *aFrame
 
   if (aOut) {
     auto ms = reinterpret_cast<RED4ext::game::ui::MinimapContainerController *>(aContext);
-    if (!ms->questMappin.Expired()) {
-      *aOut = ms->questMappin.Lock();
-    } else {
-      *aOut = NULL;
-    }
+    *aOut = ms->questMappin;
+//    if (!ms->questMappin.Expired()) {
+//      *aOut = ms->questMappin.Lock();
+//    } else {
+//      *aOut = NULL;
+//    }
   }
 }
 
@@ -107,11 +108,12 @@ void GetPOIMappin(RED4ext::IScriptable *aContext, RED4ext::CStackFrame *aFrame,
 
   if (aOut) {
     auto ms = reinterpret_cast<RED4ext::game::ui::MinimapContainerController *>(aContext);
-    if (!ms->poiMappin.Expired()) {
-      *aOut = ms->poiMappin.Lock();
-    } else {
-      *aOut = NULL;
-    }
+    *aOut = ms->poiMappin;
+//    if (!ms->poiMappin.Expired()) {
+//      *aOut = ms->poiMappin.Lock();
+//    } else {
+//      *aOut = NULL;
+//    }
   }
 }
 
@@ -187,7 +189,7 @@ RED4EXT_C_EXPORT bool RED4EXT_CALL Main(RED4ext::PluginHandle aHandle, RED4ext::
 
 RED4EXT_C_EXPORT void RED4EXT_CALL Query(RED4ext::PluginInfo *aInfo) {
   aInfo->name = L"In-World Navigation";
-  aInfo->author = L"Jack Humbert";
+  aInfo->author = L"Jack Humbert, Mathieu Bouzard";
   aInfo->version = RED4EXT_SEMVER(0, 0, 2);
   aInfo->runtime = RED4EXT_RUNTIME_LATEST;
   aInfo->sdk = RED4EXT_SDK_LATEST;

@@ -33,7 +33,8 @@ std::filesystem::path Utils::GetRootDir()
     {
         filename.resize(filename.size() + pathLength, '\0');
 
-        auto length = GetModuleFileName(nullptr, filename.data(), static_cast<uint32_t>(filename.size()));
+//        auto length = GetModuleFileName(nullptr, filename.data(), static_cast<uint32_t>(filename.size()));
+        auto length = GetModuleFileNameW(nullptr, filename.data(), static_cast<uint32_t>(filename.size()));
         if (length > 0)
         {
             // Resize it to the real, std::filesystem::path" will use the string's length instead of recounting it.
