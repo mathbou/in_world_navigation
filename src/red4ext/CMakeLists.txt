@@ -9,8 +9,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_D
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${HEADERS} ${SOURCES})
 
 include_directories("../../deps/red4ext.sdk/include")
-include_directories("../../deps/detours/include")
 include_directories("../../deps/spdlog/include")
 
 link_directories("../../deps/spdlog/build/Release")
-link_directories("../../deps/detours/lib.X64")
