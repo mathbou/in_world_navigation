@@ -7,8 +7,8 @@ public native class InWorldNavigation extends IScriptable {
   let maxPoints: Int32;
   let distanceToFade: Float;
 
-  let navPathFXs: array<array<ref<FxInstance>>>;
-  let navPathTransforms: array<array<Transform>>;
+  let navPathQuestFX: array<ref<FxInstance>>;
+  let navPathPOIFX: array<ref<FxInstance>>;
 
   let navPathYellowResource: FxResource;
   let navPathBlueResource: FxResource;
@@ -16,40 +16,25 @@ public native class InWorldNavigation extends IScriptable {
   let navPathTealResource: FxResource;
   let navPathCyanResource: FxResource;
 
-  let questResource: FxResource;
-  let poiResource: FxResource;
-
   let questVariant: gamedataMappinVariant;
   let poiVariant: gamedataMappinVariant;
 
-  let distanceToAnimate: Float;
 
   public func Setup(player: ref<GameObject>) -> Void {
     this.player = player;
-    this.spacing = 5.0; // meters
-    this.maxPoints = 200;
-    this.distanceToAnimate = 50.0;
+    this.spacing = 3.0; // meters
+    this.maxPoints = 100;
     this.distanceToFade = 25.0;
-    
-    this.navPathYellowResource = Cast<FxResource>(r"user\\jackhumbert\\effects\\world_navigation_yellow.effect");
-    this.navPathBlueResource = Cast<FxResource>(r"user\\jackhumbert\\effects\\world_navigation_blue.effect");
-    this.navPathWhiteResource = Cast<FxResource>(r"user\\jackhumbert\\effects\\world_navigation_white.effect");
-    this.navPathTealResource = Cast<FxResource>(r"user\\jackhumbert\\effects\\world_navigation_teal.effect");
-    this.navPathCyanResource = Cast<FxResource>(r"user\\jackhumbert\\effects\\world_navigation_cyan.effect");
 
-    let questFx: array<ref<FxInstance>>;
-    let poiFx: array<ref<FxInstance>>;
-    ArrayPush(this.navPathFXs, questFx);
-    ArrayPush(this.navPathFXs, poiFx);
-
-    let questTransforms: array<Transform>;
-    let poisTransforms: array<Transform>;
-    ArrayPush(this.navPathTransforms, questTransforms);
-    ArrayPush(this.navPathTransforms, poisTransforms);
+    this.navPathYellowResource = Cast<FxResource>(r"user\\mathbou\\effects\\world_navigation_yellow.effect");
+    this.navPathBlueResource = Cast<FxResource>(r"user\\mathbou\\effects\\world_navigation_blue.effect");
+    this.navPathWhiteResource = Cast<FxResource>(r"user\\mathbou\\effects\\world_navigation_white.effect");
+    this.navPathTealResource = Cast<FxResource>(r"user\\mathbou\\effects\\world_navigation_teal.effect");
+    this.navPathCyanResource = Cast<FxResource>(r"user\\mathbou\\effects\\world_navigation_cyan.effect");
   }
 
   public func GetResourceForVariant(variant: gamedataMappinVariant) -> FxResource {
-      switch (variant) {     
+      switch (variant) {
         case gamedataMappinVariant.Zzz02_MotorcycleForPurchaseVariant:
         case gamedataMappinVariant.Zzz01_CarForPurchaseVariant:
         case gamedataMappinVariant.Zzz05_ApartmentToPurchaseVariant:
@@ -66,17 +51,17 @@ public native class InWorldNavigation extends IScriptable {
           break;
         case gamedataMappinVariant.DefaultQuestVariant:
         case gamedataMappinVariant.ExclamationMarkVariant:
-          return this.navPathYellowResource; 
+          return this.navPathYellowResource;
           break;
         case gamedataMappinVariant.TarotVariant:
         case gamedataMappinVariant.FastTravelVariant:
           return this.navPathBlueResource;
-          break; 
+          break;
         case gamedataMappinVariant.GangWatchVariant:
-        case gamedataMappinVariant.HiddenStashVariant: 
+        case gamedataMappinVariant.HiddenStashVariant:
         case gamedataMappinVariant.OutpostVariant:
           return this.navPathCyanResource;
-          break; 
+          break;
         case gamedataMappinVariant.ServicePointDropPointVariant:
         case gamedataMappinVariant.CustomPositionVariant:
           return this.navPathWhiteResource;
@@ -92,124 +77,154 @@ public native class InWorldNavigation extends IScriptable {
         let questVariant = questMappin.GetVariant();
         if !Equals(questVariant, this.questVariant) {
           this.questVariant = questVariant;
-          this.UpdateNavPath(0, this.mmcc.questPoints, this.GetResourceForVariant(this.questVariant), true);
-        } else {
-          this.UpdateNavPath(0, this.mmcc.questPoints, this.GetResourceForVariant(this.questVariant), false);
         }
-      } else {     
-        for fx in this.navPathFXs[0] {
-          fx.BreakLoop();
-        }
+        this.UpdateNavPath(this.navPathQuestFX, this.mmcc.questPoints, this.GetResourceForVariant(this.questVariant));
+      } else {
+        this.StopQuest();
       }
       let poiMappin = this.mmcc.GetPOIMappin();
       if IsDefined(poiMappin) {
         let poiVariant = poiMappin.GetVariant();
         if !Equals(poiVariant, this.poiVariant) {
           this.poiVariant = poiVariant;
-          this.UpdateNavPath(1, this.mmcc.poiPoints, this.GetResourceForVariant(this.poiVariant), true);
-        } else {
-          this.UpdateNavPath(1, this.mmcc.poiPoints, this.GetResourceForVariant(this.poiVariant), false);
         }
+        this.UpdateNavPath(this.navPathPOIFX, this.mmcc.poiPoints, this.GetResourceForVariant(this.poiVariant));
       } else {
-        for fx in this.navPathFXs[1] {
-          fx.BreakLoop();
-        }
+        this.StopPOI();
       }
+    }
+  }
+
+  private func KillFx(fx: ref<FxInstance>) {
+      fx.SetBlackboardValue(n"alpha", 0.0);
+      fx.BreakLoop();
+      fx.Kill();
+  }
+
+  private func StopQuest() {
+    for fx in this.navPathQuestFX {
+      this.KillFx(fx);
+    }
+  }
+
+  private func StopPOI() {
+    for fx in this.navPathPOIFX {
+      this.KillFx(fx);
     }
   }
 
   public func Stop() {
-    for fx in this.navPathFXs[0] {
-      fx.BreakLoop();
-    }
-    for fx in this.navPathFXs[1] {
-      fx.BreakLoop();
-    }
+    this.StopQuest();
+    this.StopPOI();
   }
 
-  private func UpdateNavPath(type: Int32, points: array<Vector4>, resource: FxResource, force: Bool) -> Void {
+  private func BezierPoint(P1: Vector4, P2: Vector4, P3: Vector4, t: Float) -> Vector4 {
+    // https://javascript.info/bezier-curve
+    let a: Vector4 = PowF((1.0 - t), 2.0) * P1;
+    let b: Vector4 = 2.0 * (1.0 - t) * t * P2;
+    let c: Vector4 = PowF(t, 2.0) * P3;
+
+    let P: Vector4 = a + b + c;
+    return P;
+  }
+
+  private func BezierLengthApproximation(P1: Vector4, P2: Vector4, P3: Vector4) -> Float {
+    let S1: Vector4 = this.BezierPoint(P1, P2, P3, 0.25);
+    let S2: Vector4 = this.BezierPoint(P1, P2, P3, 0.5);
+    let S3: Vector4 = this.BezierPoint(P1, P2, P3, 0.75);
+
+    let Length: Float = Vector4.Distance(P1, S1);
+    Length += Vector4.Distance(S1, S2);
+    Length += Vector4.Distance(S2, S3);
+    Length += Vector4.Distance(S3, P3);
+
+    return Length;
+  }
+
+  private func UpdateNavPath(out fxs: array<ref<FxInstance>>, points: array<Vector4>, resource: FxResource) -> Void {
+    let lastPoint: Vector4 = this.player.GetWorldPosition();
+
+    let dots: array<Vector4>;
+    ArrayPush(dots, lastPoint);
+
+    for point in points {
+      if ArraySize(dots) >= this.maxPoints / 3 { break; }
+
+      let tweenPointDistance: Float = Vector4.Distance(point, lastPoint);
+      let tweenPointCount: Float = Cast(FloorF(tweenPointDistance / (this.spacing * 3.0 )));
+
+      if tweenPointCount >= 1.0 {
+        let i: Float = 0.0;
+
+        while i < tweenPointCount {
+          let ratio: Float = i / tweenPointCount;
+
+          let position = Vector4.Interpolate(lastPoint, point, ratio);
+          position.Z = MaxF(point.Z, lastPoint.Z);
+          ArrayPush(dots, position);
+
+          i += 1.0;
+        }
+
+        lastPoint = point;
+      }
+    }
+
+    let dot_count: Int32 = ArraySize(dots);
+    // Ensure odd dot count
+    if dot_count % 2 == 0 {
+        ArrayPop(dots);
+        dot_count -= 1;
+    }
+
+    let i: Int32 = 0;
     let pointDrawnCount: Int32 = 0;
-    let dots: array<Transform>;
+    let lastPoint: Vector4 = dots[0];
 
-    let i = ArraySize(points) - 1;
-    let lastDrawnPoint: Vector4 = points[i];
+    while i < dot_count {
+        let p1: Vector4 = dots[i];
+        let p2: Vector4 = dots[i+1];
+        let p3: Vector4 = dots[i+2];
 
-    while i > 0 {
-      let tweenPointDistance = Vector4.Distance(points[i-1], lastDrawnPoint);
-      if i == 1 {
-        tweenPointDistance += this.spacing;
+        let curveLength: Float = this.BezierLengthApproximation(p1, p2, p3);
+        let tweenPointCount: Float = Cast(FloorF(curveLength / this.spacing));
+
+        let j: Float = 0.0;
+        while j < tweenPointCount {
+            if pointDrawnCount >= this.maxPoints {break;}
+
+            let ratio: Float = j/tweenPointCount;
+            let bezierPoint = this.BezierPoint(p1, p2, p3, ratio);
+
+            let orientation = Quaternion.BuildFromDirectionVector(bezierPoint - lastPoint);
+
+            bezierPoint.Z = MaxF(p1.Z, MaxF(p2.Z, p3.Z)); // the spawnOnGround doesnt work well if z is below the ground
+
+            this.UpdateFxInstance(fxs, pointDrawnCount, bezierPoint, orientation, resource);
+
+            j += 1.0;
+            pointDrawnCount += 1;
+            lastPoint = bezierPoint;
       }
-      if tweenPointDistance >= this.spacing {
-        // let rounded = Cast<Float>(RoundF(tweenPointDistance / this.spacing));
-        // let tweenPointSpacing = this.spacing + (tweenPointDistance - rounded * this.spacing) / rounded;
-        let lastDrawnPointInLastGroup = lastDrawnPoint;
-        let distance = this.spacing;
-        while distance <= tweenPointDistance {
-          let ratio: Float = distance / tweenPointDistance;
-          let position = Vector4.Interpolate(lastDrawnPointInLastGroup, points[i-1], ratio);
-          let orientation = Quaternion.BuildFromDirectionVector(lastDrawnPoint - position);
-          distance += this.spacing;
-          ArrayPush(dots, Transform.Create(position, orientation));
-          lastDrawnPoint = position;
-        }
-      }
-      i -= 1;
+
+      if pointDrawnCount >= this.maxPoints {break;}
+      i += 2; // 2 segments are done by loop
+
     }
 
-    i = 0;
-
-    while i < ArraySize(dots) {
-      if ArraySize(this.navPathTransforms[type]) <= i {
-        ArrayPush(this.navPathTransforms[type], dots[i]);
-      } else {
-        if Vector4.Distance(this.navPathTransforms[type][i].position, dots[i].position) < this.distanceToAnimate {
-          this.navPathTransforms[type][i].position = Vector4.Interpolate(this.navPathTransforms[type][i].position, dots[i].position, 0.1);
-          this.navPathTransforms[type][i].orientation = Quaternion.Slerp(this.navPathTransforms[type][i].orientation, dots[i].orientation, 0.1);
-        } else {
-          this.navPathTransforms[type][i].position = dots[i].position;
-          this.navPathTransforms[type][i].orientation = dots[i].orientation;
-        }
-      }
-      i += 1;
-    }
-
-    ArrayResize(this.navPathTransforms[type], ArraySize(dots));
-
-    i = ArraySize(dots) - 1;
-
-    while pointDrawnCount < this.maxPoints && i >= 0 {
-      let p = this.navPathTransforms[type][i].position;
-      let q = this.navPathTransforms[type][i].orientation;
-      this.UpdateFxInstance(type, pointDrawnCount, p, q, resource, force);
-      pointDrawnCount += 1;
-      i -= 1;
-    }
-
-    while pointDrawnCount < this.maxPoints && pointDrawnCount < ArraySize(this.navPathFXs[type]) {   
-      this.navPathFXs[type][pointDrawnCount].SetBlackboardValue(n"alpha", 0.0);
-      this.navPathFXs[type][pointDrawnCount].BreakLoop();
-      this.navPathFXs[type][pointDrawnCount].Kill();
-      pointDrawnCount += 1;
-    }
   }
 
-  private func UpdateFxInstance(type: Int32, i: Int32, p: Vector4, q: Quaternion, resource: FxResource, force: Bool) {
+  private func UpdateFxInstance(out fxs: array<ref<FxInstance>>, i: Int32, p: Vector4, q: Quaternion, resource: FxResource) {
     let wt: WorldTransform;
     WorldTransform.SetPosition(wt, p);
     WorldTransform.SetOrientation(wt, q);
-    if i >= ArraySize(this.navPathFXs[type]) {
-      ArrayPush(this.navPathFXs[type], GameInstance.GetFxSystem(this.player.GetGame()).SpawnEffect(resource, wt));
-    } else { 
-      if IsDefined(this.navPathFXs[type][i]) && this.navPathFXs[type][i].IsValid() && !force {
-        this.navPathFXs[type][i].UpdateTransform(wt);
-      } else {
-        if IsDefined(this.navPathFXs[type][i]) {
-          this.navPathFXs[type][i].BreakLoop();
-          this.navPathFXs[type][i].Kill();
-        }
-        this.navPathFXs[type][i] = GameInstance.GetFxSystem(this.player.GetGame()).SpawnEffect(resource, wt);
-      }
+
+    if ArraySize(fxs) <= i {
+      ArrayPush(fxs, GameInstance.GetFxSystem(this.player.GetGame()).SpawnEffectOnGround(resource, wt));
+    } else {
+      this.KillFx(fxs[i]);
+      fxs[i] = GameInstance.GetFxSystem(this.player.GetGame()).SpawnEffectOnGround(resource, wt);
     }
-    this.navPathFXs[type][i].SetBlackboardValue(n"alpha", MinF(Vector4.Distance2D(this.player.GetWorldPosition(), p) / this.distanceToFade, 1.0));
+    fxs[i].SetBlackboardValue(n"alpha", MinF(Vector4.Distance(this.player.GetWorldPosition(), p) / this.distanceToFade, 1.0));
   }
 }
