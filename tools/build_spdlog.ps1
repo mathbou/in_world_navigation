@@ -9,5 +9,5 @@ Remove-Item $Build -Recurse
 . $CMAKE -E make_directory $Build
 Set-Location -Path $Build
 
-. $CMAKE $Src
+. $CMAKE $Src -A x64 -T ClangCL
 . $CMAKE --build $Build --config RELEASE
